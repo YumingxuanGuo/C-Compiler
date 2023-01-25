@@ -38,30 +38,77 @@ static struct ASTnode *primary(void) {
     }
 }
 
-// Return an AST tree whose root is a binary operator
-struct ASTnode *binexpr(void) {
-    struct ASTnode *n, *left, *right;
-    int nodetype;
+
+// Return an AST tree whose root is a '*' or '/' binary operator
+struct ASTnode *multiplicative_expr(void) {
+    struct ASTnode *left, *right;
+    int tokentype;
 
     // Get the integer literal on the left.
     left = primary();
 
     // If no tokens left, return just the left node.
-    if (Token.token == T_EOF) {
+    tokentype = Token.token;
+    if (tokentype == T_EOF) {
         return left;
     }
 
-    // Convert the token into a node type.
-    nodetype = arithop(Token.token);
+    // While the token is a '*' or '/'.
+    while ((tokentype == T_STAR) || (tokentype == T_SLASH))  {
+        // Fetch in the next integer literal
+        scan(&Token);
+        right = primary();
 
-    // Read the next token in.
-    scan(&Token);
+        // Join that with the left integer literal
+        left = makeastnode(arithop(tokentype), left, right, 0);
 
-    // Recurse into the right sub-tree.
-    right = binexpr();
+        // Update the details of the current token.
+        // If no tokens left, return just the left node
+        tokentype = Token.token;
+        if (tokentype == T_EOF) {
+            break;
+        }
+    }
 
-    // Build the root node with corressponding sub-trees.
-    n = makeastnode(nodetype, left, right, 0);
+    // Return whatever tree we have created
+    return left;
+}
 
-    return n;
+// Return an AST tree whose root is a '+' or '-' binary operator
+struct ASTnode *additive_expr(void) {
+    struct ASTnode *left, *right;
+    int tokentype;
+
+    // Get the multiplicative expression on the left.
+    left = multiplicative_expr();
+
+    // If no tokens left, return just the left node.
+    tokentype = Token.token;
+    if (tokentype == T_EOF) {
+        return left;
+    }
+
+    // Loop the additive expressions.
+    while (1) {
+        // Fetch in the next multiplicative expression.
+        scan(&Token);
+        right = multiplicative_expr();
+
+        // Join that with the left integer literal
+        left = makeastnode(arithop(tokentype), left, right, 0);
+
+        // Update the details of the current token.
+        // If no tokens left, return just the left node
+        tokentype = Token.token;
+        if (tokentype == T_EOF) {
+            break;
+        }
+    }
+
+    return left;
+}
+
+// Return an AST tree whose root is a binary operator
+struct ASTnode *binexpr(void) {
+  return additive_expr();
 }
