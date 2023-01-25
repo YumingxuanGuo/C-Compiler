@@ -11,8 +11,8 @@
 char *tokstr[] = { "+", "-", "*", "/", "intlit" };
 
 static void init(void) {
-    Putback = '\n';
     Line = 1;
+    Putback = '\n';
 }
 
 // Loop scanning in all the tokens in the input file.
@@ -30,6 +30,7 @@ static void scanfile() {
 }
 
 int main(int argc, char *argv[]) {
+    struct ASTnode *n;
     init();
 
     if ((Inputfile = fopen(argv[1], "r")) == NULL) {
@@ -37,7 +38,9 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    scanfile();
+    scan(&Token);			// Get the first token from the input
+    n = binexpr();		    // Parse the expression in the file
+    printf("%d\n", interpretAST(n));	// Calculate the final result
 
     exit(0);
 }

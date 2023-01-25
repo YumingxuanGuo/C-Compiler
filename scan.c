@@ -74,6 +74,7 @@ int scan(struct token *t) {
     // Determine token based on input character.
     switch (c) {
     case EOF:
+        t->token = T_EOF;
         return 0;
     case '+':
         t->token = T_PLUS;
