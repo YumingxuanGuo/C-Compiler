@@ -72,9 +72,14 @@ static int scanidentifier(int c, char *buf, int lim) {
 // to waste time strcmp()ing against all the keywords.
 static int keyword(char *str) {
     switch (*str) {
-        case 'p':
-        if (!strcmp(str, "print")) {
+    case 'p':
+        if (strcmp(str, "print") == 0) {
             return T_PRINT;
+        }
+        break;
+    case 'i':
+        if (strcmp(str, "int") == 0) {
+            return T_INT;
         }
         break;
     }
@@ -107,7 +112,7 @@ int scanint(int c) {
 // Scan and return the next token found in the input.
 // Return 1 if token valid, 0 if no tokens left.
 int scan(struct token *t) {
-    int c;
+    int c, tokentype;
 
     // Skip whitespaces.
     c = skip();
@@ -132,6 +137,9 @@ int scan(struct token *t) {
     case ';':
         t->token = T_SEMI;
         break;
+    case '=':
+        t->token = T_EQUALS;
+        break;
     
     default:
         if (isdigit(c)) {
@@ -139,19 +147,20 @@ int scan(struct token *t) {
             t->intvalue = scanint(c);
             t->token = T_INTLIT;
             break;
-        } else if (isalpha(c) || c == '_') {
+        }
+        if (isalpha(c) || c == '_') {
             // Read in a keyword or an identifier.
             scanidentifier(c, Text, TEXTLEN);
 
             // If it's a recognised keyword, return that token.
-            if (keyword(Text) == T_PRINT) {
-                t->token = T_PRINT;
+            if ((tokentype = keyword(Text)) != 0) {
+                t->token = tokentype;
                 break;
             }
 
-            // Not a recognised keyword, so an error for now
-            printf("Unrecognised symbol %s on line %d\n", Text, Line);
-            exit(1);
+            // Not a recognised keyword, so it must be an identifier.
+            t->token = T_IDENT;
+            break;
         }
         printf("Unrecognised character %c on line %d\n", c, Line);
         exit(1);
