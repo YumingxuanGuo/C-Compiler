@@ -40,6 +40,47 @@ static int skip(void) {
     return c;
 }
 
+// Scan an identifier from the input file and store it in buf[].
+// Read in alphanumeric characters into a buffer until hitting a non-alphanumeric character.
+// Return the identifier's length.
+static int scanidentifier(int c, char *buf, int lim) {
+    int i = 0;
+
+    // Allow digits, alpha and underscores.
+    while (isalpha(c) || isdigit(c) || c == '_') {
+        // Error if identifier length limit is hit.
+        if (i + 1 >= lim) {
+            printf("identifier too long on line %d\n", Line);
+            exit(1);
+        }
+
+        // Append to buf[] and get next character.
+        buf[i++] = c;
+        c = next();
+    }
+
+    // Hit a non-alphanumeric character; put it back.
+    putback(c);
+
+    buf[i] = '\0';
+    return i;
+}
+
+// Given a word from the input, return the matching
+// keyword token number or 0 if it's not a keyword.
+// Switch on the first letter so that we don't have
+// to waste time strcmp()ing against all the keywords.
+static int keyword(char *str) {
+    switch (*str) {
+        case 'p':
+        if (!strcmp(str, "print")) {
+            return T_PRINT;
+        }
+        break;
+    }
+    return 0;
+}
+
 // Return the position of character c in string str, or -1 if c is not found.
 int charpos(char *str, int c) {
     char *p = strchr(str, c);
@@ -88,12 +129,29 @@ int scan(struct token *t) {
     case '/':
         t->token = T_SLASH;
         break;
+    case ';':
+        t->token = T_SEMI;
+        break;
     
     default:
         if (isdigit(c)) {
+            // Read in an integer literal.
             t->intvalue = scanint(c);
             t->token = T_INTLIT;
             break;
+        } else if (isalpha(c) || c == '_') {
+            // Read in a keyword or an identifier.
+            scanidentifier(c, Text, TEXTLEN);
+
+            // If it's a recognised keyword, return that token.
+            if (keyword(Text) == T_PRINT) {
+                t->token = T_PRINT;
+                break;
+            }
+
+            // Not a recognised keyword, so an error for now
+            printf("Unrecognised symbol %s on line %d\n", Text, Line);
+            exit(1);
         }
         printf("Unrecognised character %c on line %d\n", c, Line);
         exit(1);

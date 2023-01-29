@@ -4,6 +4,9 @@
 #include "data.h"
 #include "decl.h"
 
+// Operator precedence for each token.
+static int OpPrec[] = {0, 10, 10, 20, 20, 0};
+
 // Convert a token into an AST operation.
 int arithop(int token) {
     switch (token) {
@@ -108,7 +111,47 @@ struct ASTnode *additive_expr(void) {
     return left;
 }
 
+// Check that we have a binary operator and return its precedence.
+static int op_precedence(int tokentype) {
+    int prec = OpPrec[tokentype];
+    if (prec == 0) {
+        fprintf(stderr, "syntax error on line %d, token %d\n", Line, tokentype);
+        exit(1);
+    }
+    return prec;
+}
+
 // Return an AST tree whose root is a binary operator
-struct ASTnode *binexpr(void) {
-  return additive_expr();
+struct ASTnode *binexpr(int ptp) {
+    struct ASTnode *left, *right;
+    int tokentype;
+
+    // Get the integer literal on the left.
+    // Fetch the next token at the same time.
+    left = primary();
+
+    // If no tokens left, return just the left node
+    tokentype = Token.token;
+    if (tokentype == T_SEMI)
+        return left;
+
+    // While the precedence of this token is larger than the previous one's:
+    while (op_precedence(tokentype) > ptp) {
+        // Fetch in the next integer literal.
+        scan(&Token);
+
+        // Recursively build up the right subtree.
+        right = binexpr(op_precedence(tokentype));
+
+        // Join the subtrees.
+        left = makeastnode(arithop(tokentype), left, right, 0);
+
+        // Update the details of the current token.
+        tokentype = Token.token;
+        if (tokentype == T_SEMI) {
+            return left;
+        }
+    }
+
+    return left;
 }

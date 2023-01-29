@@ -44,10 +44,10 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    scan(&Token);			// Get the first token from the input
-    n = binexpr();		    // Parse the expression in the file
-    printf("%d\n", interpretAST(n));	// Calculate the final result
-    generatecode(n);
+    scan(&Token);	 // Get the first token from the input.
+    genpreamble();   // Output the preamble.
+    statements();    // Parse the statements from the input.
+    genpostamble();  // Output the postamble.
 
     fclose(Outfile);
     exit(0);
