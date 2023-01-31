@@ -30,7 +30,7 @@ static void scanfile() {
 }
 
 int main(int argc, char *argv[]) {
-    struct ASTnode *n;
+    struct ASTnode *tree;
     init();
 
     if ((Inputfile = fopen(argv[1], "r")) == NULL) {
@@ -44,10 +44,11 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    scan(&Token);	 // Get the first token from the input.
-    genpreamble();   // Output the preamble.
-    statements();    // Parse the statements from the input.
-    genpostamble();  // Output the postamble.
+    scan(&Token);	              // Get the first token from the input.
+    genpreamble();                // Output the preamble.
+    tree = compound_statement();  // Parse the statements from the input.
+    genAST(tree, NOREG, 0);       // Generate the assembly code for it
+    genpostamble();               // Output the postamble.
 
     fclose(Outfile);
     exit(0);

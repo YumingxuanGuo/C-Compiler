@@ -80,6 +80,13 @@ static int keyword(char *str) {
     case 'i':
         if (strcmp(str, "int") == 0) {
             return T_INT;
+        } else if (strcmp(str, "if") == 0) {
+            return T_IF;
+        }
+        break;
+    case 'e':
+        if (strcmp(str, "else") == 0) {
+            return T_ELSE;
         }
         break;
     }
@@ -137,6 +144,18 @@ int scan(struct token *t) {
     case ';':
         t->token = T_SEMI;
         break;
+    case '{':
+      t->token = T_LBRACE;
+      break;
+    case '}':
+      t->token = T_RBRACE;
+      break;
+    case '(':
+      t->token = T_LPAREN;
+      break;
+    case ')':
+      t->token = T_RPAREN;
+      break;
     case '=':
         if ((c = next()) == '=') {
             t->token = T_EQ;

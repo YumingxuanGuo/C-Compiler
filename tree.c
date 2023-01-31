@@ -5,7 +5,7 @@
 #include "decl.h"
 
 // Build and return a generic AST node.
-struct ASTnode *makeastnode(int op, struct ASTnode *left, struct ASTnode *right, int intvalue) {
+struct ASTnode *makeastnode(int op, struct ASTnode *left, struct ASTnode *mid, struct ASTnode *right, int intvalue) {
     struct ASTnode *n;
 
     // Malloc a new ASTnode.
@@ -18,6 +18,7 @@ struct ASTnode *makeastnode(int op, struct ASTnode *left, struct ASTnode *right,
     // Set the field values.
     n->op = op;
     n->left = left;
+    n->mid = mid;
     n->right = right;
     n->v.intvalue = intvalue;
 
@@ -26,10 +27,10 @@ struct ASTnode *makeastnode(int op, struct ASTnode *left, struct ASTnode *right,
 
 // Make an AST leaf node.
 struct ASTnode *makeastleaf(int op, int intvalue) {
-  return (makeastnode(op, NULL, NULL, intvalue));
+  return (makeastnode(op, NULL, NULL, NULL, intvalue));
 }
 
 // Make a unary AST node: only one child (left as default).
 struct ASTnode *makeastunary(int op, struct ASTnode *left, int intvalue) {
-  return (makeastnode(op, left, NULL, intvalue));
+  return (makeastnode(op, left, NULL, NULL, intvalue));
 }
