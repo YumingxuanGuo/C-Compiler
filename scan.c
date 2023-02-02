@@ -89,6 +89,11 @@ static int keyword(char *str) {
             return T_ELSE;
         }
         break;
+    case 'w':
+        if (strcmp(str, "while") == 0) {
+            return T_WHILE;
+        }
+        break;
     }
     return 0;
 }

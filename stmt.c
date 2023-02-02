@@ -13,6 +13,7 @@
 //      |     declaration
 //      |     assignment_statement
 //      |     if_statement
+//      |     while_statement
 //      ;
 //
 // print_statement: 'print' expression ';'  ;
@@ -108,6 +109,32 @@ struct ASTnode *if_statement(void) {
     return makeastnode(A_IF, condAST, trueAST, falseAST, 0);
 }
 
+// Parse a `while` statement and return its AST.
+struct ASTnode *while_statement(void) {
+    struct ASTnode *condAST, *bodyAST;
+
+    // Match an `while` and a `(`
+    match(T_WHILE, "while");
+    lparen();
+
+    // Parse the condition expression.
+    condAST = binexpr(0);
+
+    // Ensure the condition expression's operation is a comparison.
+    if (condAST->op < A_EQ || condAST->op > A_GE) {
+        fatal("Bad comparison operator");
+    }
+
+    // Match the haning `)`.
+    rparen();
+
+    // Generate the AST for the body.
+    bodyAST = compound_statement();
+
+    // Build and return the AST for this statement.
+    return makeastnode(A_WHILE, condAST, NULL, bodyAST, 0);
+}
+
 // Parse a compound statement and return its AST.
 struct ASTnode *compound_statement(void) {
     struct ASTnode *left = NULL, *tree;
@@ -129,6 +156,9 @@ struct ASTnode *compound_statement(void) {
             break;
         case T_IF:
             tree = if_statement();
+            break;
+        case T_WHILE:
+            tree = while_statement();
             break;
         case T_RBRACE:
             // When hit a right curly bracket, skip it and return the AST.
