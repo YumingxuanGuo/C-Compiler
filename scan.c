@@ -94,6 +94,11 @@ static int keyword(char *str) {
             return T_WHILE;
         }
         break;
+    case 'f':
+        if (strcmp(str, "for") == 0) {
+            return T_FOR;
+        }
+        break;
     }
     return 0;
 }

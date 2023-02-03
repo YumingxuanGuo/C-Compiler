@@ -4,32 +4,11 @@
 #include "data.h"
 #include "decl.h"
 
-// compound_statement:          // empty, i.e. no statement
-//      |      statement
-//      |      statement statements
-//      ;
-//
-// statement: print_statement
-//      |     declaration
-//      |     assignment_statement
-//      |     if_statement
-//      |     while_statement
-//      ;
-//
+// Prototypes
+static struct ASTnode *single_statement(void);
+
 // print_statement: 'print' expression ';'  ;
 //
-// declaration: 'int' identifier ';'  ;
-//
-// assignment_statement: identifier '=' expression ';'   ;
-//
-// if_statement: if_head
-//      |        if_head 'else' compound_statement
-//      ;
-//
-// if_head: 'if' '(' true_false_expression ')' compound_statement  ;
-//
-// identifier: T_IDENT ;
-
 static struct ASTnode *print_statement(void) {
     struct ASTnode *tree;
     int reg;
@@ -43,12 +22,11 @@ static struct ASTnode *print_statement(void) {
     // Make an print AST tree.
     tree = makeastunary(A_PRINT, tree, 0);
 
-    // Match the following semicolon and return the AST.
-    semi();
-
     return (tree);
 }
 
+// assignment_statement: identifier '=' expression ';'   ;
+//
 static struct ASTnode *assignment_statement(void) {
     struct ASTnode *left, *right, *tree;
     int id;
@@ -70,13 +48,16 @@ static struct ASTnode *assignment_statement(void) {
 
     // Make an assignment AST tree.
     tree = makeastnode(A_ASSIGN, left, NULL, right, 0);
-    
-    // Match the following semicolon.
-    semi();
 
     return tree;
 }
 
+// if_statement: if_head
+//      |        if_head 'else' compound_statement
+//      ;
+//
+// if_head: 'if' '(' true_false_expression ')' compound_statement  ;
+//
 // Parse an `if` statement including any option `else`, and return its AST.
 struct ASTnode *if_statement(void) {
     struct ASTnode *condAST, *trueAST, *falseAST = NULL;
@@ -109,6 +90,8 @@ struct ASTnode *if_statement(void) {
     return makeastnode(A_IF, condAST, trueAST, falseAST, 0);
 }
 
+// while_statement: 'while' '(' true_false_expression ')' compound_statement  ;
+//
 // Parse a `while` statement and return its AST.
 struct ASTnode *while_statement(void) {
     struct ASTnode *condAST, *bodyAST;
@@ -135,6 +118,98 @@ struct ASTnode *while_statement(void) {
     return makeastnode(A_WHILE, condAST, NULL, bodyAST, 0);
 }
 
+// for_statement: 'for' '(' preop_statement ';'
+//                          true_false_expression ';'
+//                          postop_statement ')' compound_statement  ;
+
+// preop_statement:  statement  ;        (for now)
+// postop_statement: statement  ;        (for now)
+//
+// Parse a `for` statement and return its AST.
+struct ASTnode *for_statement(void) {
+    struct ASTnode *condAST, *bodyAST;
+    struct ASTnode *preopAST, *postopAST;
+    struct ASTnode *tree;
+
+    // Match a `for` and a `(`.
+    match (T_FOR, "for");
+    lparen();
+
+    // Get the pre_op statement and the `;`.
+    preopAST = single_statement();
+    semi();
+
+    // Get the condition and the `;`.
+    condAST = binexpr(0);
+    if (condAST->op < A_EQ || condAST->op > A_GE) {
+        fatal("Bad comparison operator");
+    }
+    semi();
+
+    // Get the post_op statement and the `)`.
+    postopAST = single_statement();
+    rparen();
+
+    // Get the body compound statement.
+    bodyAST = compound_statement();
+
+    // For now, all four sub-trees have to be non-NULL.
+    // Later on, we'll change the semantics for when some are missing.
+
+    //          A_GLUE
+    //         /     \
+    //    preop     A_WHILE
+    //              /    \
+    //         decision  A_GLUE
+    //                   /    \
+    //             compound  postop
+
+    tree = makeastnode(A_GLUE, bodyAST, NULL, postopAST, 0);
+    tree = makeastnode(A_WHILE, condAST, NULL, tree, 0);
+    tree = makeastnode(A_GLUE, preopAST, NULL, tree, 0);
+
+    return tree;
+}
+
+// Parse a single statement and return its AST.
+static struct ASTnode *single_statement(void) {
+    switch (Token.token) {
+    case T_PRINT:
+        return print_statement();
+    case T_INT:
+        var_declaration();
+        return NULL;
+    case T_IDENT:
+        return assignment_statement();
+    case T_IF:
+        return if_statement();
+    case T_WHILE:
+        return while_statement();
+    case T_FOR:
+        return for_statement();
+    
+    default:
+        fatald("Syntax error, token", Token.token);
+    }
+}
+
+// compound_statement:          // empty, i.e. no statement
+//      |      statement
+//      |      statement statements
+//      ;
+//
+// statement: print_statement
+//      |     declaration
+//      |     assignment_statement
+//      |     if_statement
+//      |     while_statement
+//      |     for_statement
+//      ;
+//
+// declaration: 'int' identifier ';'  ;
+//
+// identifier: T_IDENT ;
+//
 // Parse a compound statement and return its AST.
 struct ASTnode *compound_statement(void) {
     struct ASTnode *left = NULL, *tree;
@@ -143,40 +218,25 @@ struct ASTnode *compound_statement(void) {
     lbrace();
 
     while (1) {
-        switch (Token.token) {
-        case T_PRINT:
-            tree = print_statement();
-            break;
-        case T_INT:
-            var_declaration();
-            tree = NULL;
-            break;
-        case T_IDENT:
-            tree = assignment_statement();
-            break;
-        case T_IF:
-            tree = if_statement();
-            break;
-        case T_WHILE:
-            tree = while_statement();
-            break;
-        case T_RBRACE:
-            // When hit a right curly bracket, skip it and return the AST.
-            rbrace();
-            return left;
-        
-        default:
-            fatald("Syntax error, token", Token.token);
-        }
+        tree = single_statement();
 
         // For each new tree, either save it in the left (if left is NULL),
         // or make a new tree with left.
         if (tree) {
+            if (tree->op == A_PRINT || tree->op == A_ASSIGN) {
+                semi();
+            }
+
             if (left == NULL) {
                 left = tree;
             } else {
                 left = makeastnode(A_GLUE, left, NULL, tree, 0);
             }
+        }
+
+        if (Token.token == T_RBRACE) {
+            rbrace();
+            return left;
         }
     }
 }
