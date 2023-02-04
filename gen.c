@@ -101,6 +101,12 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
         genAST(n->right, NOREG, n->op);
         genfreeregs();
         return (NOREG);
+    case A_FUNCTION:
+        // Generate the function's preamble and postamble codes.
+        cgfuncpreamble(Gsym[n->v.id].name);
+        genAST(n->left, NOREG, n->op);
+        cgfuncpostamble();
+        return (NOREG);
     }
 
     // Get the left and right sub-tree values
@@ -110,52 +116,48 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
         rightreg = genAST(n->right, leftreg, n->op);
 
     switch (n->op) {
-        case A_ADD:
-            return (cgadd(leftreg,rightreg));
-        case A_SUBTRACT:
-            return (cgsub(leftreg,rightreg));
-        case A_MULTIPLY:
-            return (cgmul(leftreg,rightreg));
-        case A_DIVIDE:
-            return (cgdiv(leftreg,rightreg));
-        case A_INTLIT:
-            return (cgloadint(n->v.intvalue));
-        case A_IDENT:
-            return (cgloadglob(Gsym[n->v.id].name));
-        case A_LVIDENT:
-            return (cgstorglob(reg, Gsym[n->v.id].name));
-        case A_ASSIGN:
-            return rightreg;
-        case A_PRINT:
-            // Print the left-child's value and return no register.
-            genprintint(leftreg);
-            genfreeregs();
-            return (NOREG);
-        case A_EQ:
-        case A_NE:
-        case A_LT:
-        case A_GT:
-        case A_LE:
-        case A_GE:
-        // If the parent AST node is an A_IF, generate a compare followed by a jump. 
-        // Otherwise, compare registers and set one to 1 or 0 based on the comparison.
-        if (parentASTop == A_IF || parentASTop == A_WHILE)
-            return (cgcompare_and_jump(n->op, leftreg, rightreg, reg));
-        else
-            return (cgcompare_and_set(n->op, leftreg, rightreg));
+    case A_ADD:
+        return (cgadd(leftreg,rightreg));
+    case A_SUBTRACT:
+        return (cgsub(leftreg,rightreg));
+    case A_MULTIPLY:
+        return (cgmul(leftreg,rightreg));
+    case A_DIVIDE:
+        return (cgdiv(leftreg,rightreg));
+    case A_INTLIT:
+        return (cgloadint(n->v.intvalue));
+    case A_IDENT:
+        return (cgloadglob(Gsym[n->v.id].name));
+    case A_LVIDENT:
+        return (cgstorglob(reg, Gsym[n->v.id].name));
+    case A_ASSIGN:
+        return rightreg;
+    case A_PRINT:
+        // Print the left-child's value and return no register.
+        genprintint(leftreg);
+        genfreeregs();
+        return (NOREG);
+    case A_EQ:
+    case A_NE:
+    case A_LT:
+    case A_GT:
+    case A_LE:
+    case A_GE:
+    // If the parent AST node is an A_IF, generate a compare followed by a jump. 
+    // Otherwise, compare registers and set one to 1 or 0 based on the comparison.
+    if (parentASTop == A_IF || parentASTop == A_WHILE)
+        return (cgcompare_and_jump(n->op, leftreg, rightreg, reg));
+    else
+        return (cgcompare_and_set(n->op, leftreg, rightreg));
 
-        default:
-            fatald("Unknown AST operator", n->op);
+    default:
+        fatald("Unknown AST operator", n->op);
     }
     return 1;
 }
 
 void genpreamble() {
     cgpreamble();
-}
-
-void genpostamble() {
-    cgpostamble();
 }
 
 void genfreeregs() {

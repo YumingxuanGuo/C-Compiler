@@ -99,6 +99,11 @@ static int keyword(char *str) {
             return T_FOR;
         }
         break;
+    case 'v':
+        if (strcmp(str, "void") == 0) {
+            return T_VOID;
+        }
+        break;
     }
     return 0;
 }
